@@ -1,0 +1,227 @@
+/* ==========================================================================
+   style.css
+ ========================================================================== */
+ 
+body {
+    background: #ffffff;
+}
+
+.container {
+  max-width: 1280px;
+}
+
+/* header 
+   -------------------------------------------------------------------------- */
+.head {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  color: #fff;
+  background-color: rgb(60, 99, 130);
+  text-align: center;
+}
+
+.head h1 {
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  font-size: 2em;
+}
+
+.head h2 {
+  color: #ebecee;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding: 0;
+  font-style: italic;
+  font-size: 1.5em;
+  letter-spacing: .1rem;
+}
+
+/* footer 
+   -------------------------------------------------------------------------- */
+.foot {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  margin-top: 10px;
+  color: #FFF;
+  background-color: rgb(60, 99, 130);
+  /* font-size: small; */
+}
+
+.foot a, .foot h5 {
+  color: #FFF;
+}
+
+.foot a:focus,
+.foot a:hover {
+  color: #EEE;
+}
+
+.uppa-logo {
+  display: inline-block;
+  width: 30%;
+}
+
+.about {
+  display: inline-block;
+  width: 70%;
+}
+
+/* Fix issue due to BOOTSTRAP and dash_table that share .row class  */
+.dash-spreadsheet .row {
+  flex-wrap: nowrap;
+}
+
+/* containts 
+   -------------------------------------------------------------------------- */
+.upload-area {
+  height: 80px;
+  line-height: 80px;
+  border-width: 1px;
+  border-style: dashed;
+  border-radius: 5px;
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  background-color: white;
+}
+
+.upload-area a {
+  text-decoration: underline;
+  color: red;
+}
+
+
+#dash-bio-container {
+  box-sizing: border-box;
+  width: 600px;
+  padding: 5px;
+  display: inline-block;
+  float: left;
+}
+
+#dash-bio-viewer {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+#colorbar {
+  position: relative;
+  width: 100%;
+  margin: 0 0 0 20px;
+  /* margin: 0 0 0 30px; */
+  box-sizing: border-box;
+}
+
+#data-table-container {
+  /* width: 50%; */
+  box-sizing: border-box;
+  padding: 5px;
+  width: calc(100% - 600px);
+  display: inline-block;
+}
+
+.control-label {
+  width: 50%;
+  float: left;
+  display: inline-block;
+  margin: 10px 0 10px 0;
+  vertical-align: middle;
+}
+
+.control {
+  margin: 10px 0 10px 0;
+  width: 50%;
+  display: inline-block;
+}
+
+/* h2, h3, h4, h5, H6 {
+  color: rgb(60, 99, 130);
+}
+
+.controls {
+  margin-top: 30px;
+  background-color: rgba(60, 99, 130, 0.075);
+  padding: 0 20px 20px 20px;
+  border-top: solid rgb(60, 99, 130) 4px;
+}
+
+.controls h5 {
+  margin-top: 10px;
+  margin-bottom: 0;
+  font-size: 1.8rem;
+}
+
+
+.table-title {
+  margin-top: 20px;
+}
+
+#select-stats-graph input {
+  margin-right: .5em;
+}
+
+#select-stats-graph label {
+  min-width: 5em;
+}
+
+#download-button button {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+a#download-button {
+  text-decoration: none;
+}
+
+
+.documentation {
+  margin-top: 50px;
+  font-size: 1.75rem;
+}
+
+.documentation img {
+  max-width: 80%;
+  height: auto;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  border-style: none;
+}
+
+.documentation h3 {
+  margin-top: 1.8rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid rgb(60, 99, 130);
+}
+
+.documentation h4 {
+  margin-bottom: .8rem;
+  margin-top: 1.8rem;
+}
+
+.documentation h5 {
+  margin-bottom: .5rem;
+  margin-top: 1.5rem;
+}
+
+.documentation h6 {
+  margin-bottom: 0;
+  margin-top: 1rem;
+  font-size: 1.8rem;
+}
+
+.documentation ul {
+  list-style: disc inside; 
+}
+
+.documentation li {
+  margin: 0;
+}
+
+.tab-container {
+  font-weight: bold;
+  color: rgb(100, 100, 100);
+} 
+
+*/
