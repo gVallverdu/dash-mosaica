@@ -300,7 +300,7 @@ def get_pyramidalization(coords):
 def get_haddon(coords):
     """
     Assuming the first point is linked to the followings, compute the pyramidalization
-    following the definition of Haddon et al. The anlge of pyramidalization is
+    following the definition of Haddon et al. The angle of pyramidalization is
     compute as the angle between the vector normal to the (j, k, l) plane and the
     bonds between i and j, k and l.
 

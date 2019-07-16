@@ -162,6 +162,8 @@ h2, h3, h4, h5, H6 {
   font-size: 1.75rem;
 }
 
-.clear hr {
+.clearfix {
   clear: both;
+  display: block;
+  content: "";
 }

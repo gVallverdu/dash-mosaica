@@ -2,15 +2,32 @@
 # -*- coding=utf-8 -*-
 
 """
-# Structural data viewer
+## Documentation
 
-This application aims to visualize structural data computed computed as atomic
-properties on to a 3D structure viewer.
+This application aims to visualize structural data in order to provide a geometrical
+analysis of a molecular strucutre. It also provides a way to visualize any 
+atomic quantities.
 
-TODO:
-* Show/Hide atom names = species + index
-* Ball and stick representation
-* Zoom fit the box at the beginning
+The definitions of the geometrical data available by default are given below.
+Some of them are available only if there is a minimum number of bonds:
+
+* **Angular defect (degrees):** The angular defect is a measure of the discrete curvature
+on a given atom. It is computed as360° minus the sum of the angles between bonds with atoms
+bonded to the considered atom.
+* **haddon (degrees):** This is the pyramidalization angle as defined by 
+Haddon et. al. [ref]
+* **improper angle (degrees):** This is the improper dihedral angle
+* **dist. from. ave. plane (angstrom):** This is the distance between the
+considered atom and the average plane defined by atoms bonded to it.
+* **neighbors (number):** This is the number of neighbors of the atom
+* **ave. neighb. dist. (angstrom):** This is the average distance between the 
+considered atom and its neighbors.
+
+### File upload
+
+The application accepts standard xyz files. The first line of the file must
+contains the number of atom, the second line is a title (not considered here) and
+the following lines start by the element name followed by the cartesian coordinates.
 """
 
 import io
@@ -94,8 +111,9 @@ footer = html.Div(className="foot", children=[
     html.Div(className="container", children=[
         html.Div(className="about", children=[
             html.H5("About:"),
-            html.P([html.Span(className="fas fa-user"),
-                    " Germain Salvato Vallverdu"]),
+            html.P([html.Span(className="fas fa-user"), " ",
+                    html.A("Germain Salvato Vallverdu", 
+                           href="https://gsalvatovallverdu.gitlab.io/")]),
             html.P([
                 html.A([html.Span(className="fab fa-github"), " @gvallverdu"],
                        href="https://github.com/gVallverdu"),
@@ -199,7 +217,7 @@ body = html.Div(className="container", children=[
             ]),
         ])
     ]),
-    html.Hr(className="clear"),
+    html.Hr(className="clearfix"),
     html.Div(className="documentation", children=[
         dcc.Markdown(__doc__)
     ])
@@ -234,7 +252,7 @@ def upload_data(content):
         species, coords = utils.read_molecule(fdata)
 
     else:
-        filename = "C28-D2.xyz"
+        filename = app.get_asset_url("data/C28-D2.xyz")
         with open(filename, "r") as f:
             species, coords = utils.read_molecule(f)
 
