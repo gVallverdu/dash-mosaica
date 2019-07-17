@@ -99,11 +99,16 @@ server = app.server
 
 # --- header ---
 header = html.Div(className="head", children=[
-    html.H1(children=[
-            html.Span(className="fas fa-atom"), " ",
-            __title__
-            ]),
-    html.H2(__subtitle__)
+    html.H1(children=[html.Span(className="fas fa-atom"), " ", __title__]),
+    # html.H2(__subtitle__)
+    html.A(
+        id="github-link", 
+        href="https://github.com/gVallverdu/dash-mosaica", 
+        children=[
+            "View on GitHub",
+        ]
+    ),
+    html.Span(id="github-icon", className="fab fa-github fa-2x"),
 ])
 
 # --- Footer ---
@@ -111,16 +116,22 @@ footer = html.Div(className="foot", children=[
     html.Div(className="container", children=[
         html.Div(className="about", children=[
             html.H5("About:"),
-            html.P([html.Span(className="fas fa-user"), " ",
-                    html.A("Germain Salvato Vallverdu", 
-                           href="https://gsalvatovallverdu.gitlab.io/")]),
             html.P([
-                html.A([html.Span(className="fab fa-github"), " @gvallverdu"],
-                       href="https://github.com/gVallverdu"),
-                " / ",
-                html.A([html.Span(className="fab fa-twitter"), " @gvallverdu"],
-                       href="https://twitter.com/gvallverdu")
-            ]),
+                # html.Span(className="fas fa-user"), " ",
+                html.A("Germain Salvato Vallverdu", 
+                       href="https://gsalvatovallverdu.gitlab.io/")]),
+            # html.P([
+            #     html.A([html.Span(className="fab fa-github"), " @gvallverdu"],
+            #            href="https://github.com/gVallverdu"),
+            #     " / ",
+            #     html.A([html.Span(className="fab fa-twitter"), " @gvallverdu"],
+            #            href="https://twitter.com/gvallverdu")
+            # ]),
+            html.P(
+                html.A(href="https://www.univ-pau.fr", children=[
+                    "University of Pau & Pays Adour"
+                ])
+            )
         ]),
         html.Div(className="uppa-logo", children=[
             html.A(href="https://www.univ-pau.fr", children=[
@@ -147,8 +158,7 @@ body = html.Div(className="container", children=[
             # --- controls
             html.Div(className="control-panel", children=[
                 # --- upload
-                html.Div(className="control-label",
-                         children="Upload xyz file"),
+                html.Div(id="upload-label", children="Upload xyz file"),
                 dcc.Upload(
                     id='file-upload',
                     children=html.Div(
@@ -188,9 +198,15 @@ body = html.Div(className="container", children=[
             html.Div(className="control-panel", children=[
                 html.Div(className="column-selector-label",
                          children="Select the columns of the table:"),
-                dcc.Dropdown(
+                # dcc.Dropdown(
+                #     id="data-column-selector",
+                #     multi=True,
+                # ),
+                dcc.Checklist(
                     id="data-column-selector",
-                    multi=True,
+                    values=[],
+                    inputClassName="checklist-item",
+                    labelClassName="checklist-label",
                 ),
             ]),
             html.Div(children=[
@@ -209,7 +225,7 @@ body = html.Div(className="container", children=[
                                              'backgroundColor': 'rgba(60, 93, 130, .05)'}],
                     style_data={'border': '1px solid gray'},
                     style_table={"overflowX": "scroll",
-                                 "maxHeight": "800px",
+                                 "maxHeight": "700px",
                                  "overflowY": "scroll"},
                     # need higher version of dash_table, incompatible with dash-bio
                     # fixed_rows={'headers': True, 'data': 0}
@@ -235,7 +251,7 @@ app.layout = html.Div([header, body, footer])
      Output("dash-bio-viewer", "children"),
      Output("dropdown-data", "options"),
      Output("data-column-selector", "options"),
-     Output("data-column-selector", "value")],
+     Output("data-column-selector", "values")],
     [Input("file-upload", "contents")]
 )
 def upload_data(content):
@@ -288,7 +304,7 @@ def upload_data(content):
     [Output("data-table", "data"),
      Output("data-table", "columns")],
     [Input("data-storage", "modified_timestamp"),
-     Input("data-column-selector", "value")],
+     Input("data-column-selector", "values")],
     [State("data-storage", "data")]
 )
 def set_table_columns(ts, values, data):
