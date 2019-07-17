@@ -154,14 +154,6 @@ h2, h3, h4, h5, H6 {
   height: 600px !important; 
 }
 
-#colorbar {
-  position: relative;
-  width: 100%;
-  margin: 0 0 0 20px;
-  /* margin: 0 0 0 30px; */
-  box-sizing: border-box;
-}
-
 #data-table-container {
   /* width: 50%; */
   box-sizing: border-box;

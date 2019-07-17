@@ -212,7 +212,7 @@ body = html.Div(className="container", children=[
             html.Div(children=[
                 dash_table.DataTable(
                     id="data-table",
-                    editable=False,
+                    editable=True,
                     style_cell={'maxWidth': '60px',
                                 'width': '60px',
                                 'minWidth': '60px',
@@ -265,16 +265,23 @@ def upload_data(content):
         content_type, content_str = content.split(",")
         decoded = base64.b64decode(content_str).decode("utf-8")
         fdata = io.StringIO(decoded)
-        species, coords = utils.read_molecule(fdata)
+        species, coords, atomic_prop = utils.read_xyz(fdata)
 
     else:
-        filename = app.get_asset_url("data/C28-D2.xyz")
+        # filename = app.get_asset_url("data/C28-D2.xyz")
+        filename = "assets/data/isomereB.xyz"
         with open(filename, "r") as f:
-            species, coords = utils.read_molecule(f)
+            species, coords, atomic_prop = utils.read_xyz(f)
 
     # comute data
     df, distances = utils.compute_data(species, coords)
+    if atomic_prop:
+        df_prop = pd.DataFrame(atomic_prop, index=df.index)
+        df = pd.merge(df, df_prop, left_index=True, right_index=True)
+    
     model_data = utils.get_molecular_data(species, coords)
+    # if "custom" not in df:
+    #     df["custom"] = 0.0
 
     # all data for the store component
     all_data = df.to_dict("records")
@@ -289,16 +296,17 @@ def upload_data(content):
         selectionType='atom'
     )
 
-    # dropdown for table columns
+    # options for the checklist in order to select the columns of the table
     tab_options = [{"label": name, "value": name} for name in df]
+    # tab_options.append({"label": "custom", "value": "custom"})
     values = ["atom index", "species", "angular defect", "haddon", "neighbors"]
 
-    # options for dropdown for mapped values
+    # options to select data mapped on atoms
     options = [{"label": name, "value": name} for name in df
                if name not in ["atom index", "species"]]
+    # options.append({"label": "custom", "value": "custom"})
 
     return all_data, dbviewer, options, tab_options, values
-
 
 @app.callback(
     [Output("data-table", "data"),
@@ -309,14 +317,17 @@ def upload_data(content):
 )
 def set_table_columns(ts, values, data):
     """
-    Select columns for the table
+    Select columns displayed in the table. A custom column is available and 
+    filled with zero by default.
     """
-
+    # get data from Store
     df = pd.DataFrame(data)
 
     if values is None:
+        # initial set up
         return [], []
     else:
+        # fill the table with the selected columns
         tab_df = df[values]
         columns = [{"name": i, "id": i} for i in tab_df]
         data = tab_df.to_dict("records")
@@ -428,10 +439,10 @@ def plot_colorbar(selected_data, cm_name, data):
         figure = go.Figure(
             data=trace,
             layout=go.Layout(
-                width=550, height=100,
+                width=580, height=100,
                 xaxis=dict(showgrid=False, title=selected_data),
                 yaxis=dict(ticks="", showticklabels=False),
-                margin=dict(l=0, t=0, b=40, r=0, pad=0)
+                margin=dict(l=40, t=0, b=40, r=20, pad=0)
             )
         )
     else:

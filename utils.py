@@ -60,6 +60,7 @@ BOND_CUTOFF_DICT = {
     ("F", "H"): 1.2,
 }
 
+
 def get_atom_color(specie):
     """
     Return the color of an atom according to the ATOM_COLOR_DICT
@@ -68,6 +69,7 @@ def get_atom_color(specie):
         return ATOM_COLOR_DICT[specie]
     else:
         return ATOM_COLOR_DICT["G"]
+
 
 def get_bond_cutoff(specie1, specie2, rcut=2.0):
     """
@@ -80,25 +82,77 @@ def get_bond_cutoff(specie1, specie2, rcut=2.0):
     else:
         return rcut
 
-def read_molecule(file):
+
+def read_xyz(file):
     """
-    Return coords and atom names from a xyz like file. 
+    Read an xyz like file.
     The file is suposed to display the number of atom on the first line,
     followed by a title line and followed by the structure in cartesian
     coordinates. Each line contains the element as first item and the
-    cartesian coordinates as 2d, 3th and 4th itmes.
+    cartesian coordinates as 2d, 3th and 4th items. Example:
+
+        3
+        H2O molecule
+        O   -0.111056  0.033897  0.043165
+        H    0.966057  0.959148 -1.089095
+        H    0.796629 -1.497157  0.403985
+
+    If additional data are provided on each line, they are returned as 
+    atomic properties. Example, this file:
+
+        3
+        H2O molecule
+        O   -0.111056  0.033897  0.043165   -1.8
+        H    0.966057  0.959148 -1.089095    0.9
+        H    0.796629 -1.497157  0.403985    0.9
+
+    will return an `atomic_prop` dict such as:
+
+        {"prop1": [-1.8, 0.9, 0.9]}
+
+    Args:
+        file (IO): An IO object with a readline() method
+
+    Returns:
+        * species, the list of elements
+        * coords, a numpy array of floats with the shape (natom, 3)
+        * None or atomic_prop dict such as {"prop1": [...], "prop2": [...]}
     """
 
+    # natom
     natom = int(file.readline().split()[0])
     _ = file.readline()
+
+    # look for addition atomic properties
+    nval_per_lines = [len(file.readline().split()) for _ in range(natom)]
+    nprop = max(nval_per_lines)
+    if all([nprop == nval for nval in nval_per_lines]):
+        atomic_prop = list()
+        nprop = nprop - 4
+    else:
+        atomic_prop = None
+        nprop = 0
+
+    # read the file
+    file.seek(0)
+    file.readline()  # natom
+    file.readline()  # title
+
     coords = list()
     species = list()
     for _ in range(natom):
-        data = file.readline().split()[:4]
+        data = file.readline().split()
         species.append(data[0])
         coords.append(data[1:4])
 
-    return species, np.array(coords, dtype=np.float)
+        if nprop > 0:
+            atomic_prop.append(data[4:4 + nprop])
+
+    if nprop > 0:
+        atomic_prop = np.array(atomic_prop, dtype=np.float).transpose()
+        atomic_prop = {"prop%d" % i: d for i, d in enumerate(atomic_prop)}
+
+    return species, np.array(coords, dtype=np.float), atomic_prop
 
 
 def get_molecular_data(species, coords, rcut=2.0):
@@ -133,7 +187,7 @@ def get_molecular_data(species, coords, rcut=2.0):
                 model_data["bonds"].append(
                     {"atom1_index": iat, "atom2_index": jat}
                 )
-    
+
     # distances = np.tril(np.sqrt(np.sum(distances, axis=-1)))
     # pairs = np.where((distances > 0) & (distances < rcut))
     # pairs = np.vstack(pairs).transpose()
@@ -165,7 +219,7 @@ def compute_data(species, coords, rcut=2.0, distances=None):
         # compute all distances
         distances = (coords[:, None, :] - coords[None, :, :]) ** 2
         distances = np.sqrt(np.sum(distances, axis=-1))
-    
+
     # dict of data to set up the dataframe
     natom = len(species)
     data = {"angular defect": list(),
@@ -179,8 +233,8 @@ def compute_data(species, coords, rcut=2.0, distances=None):
             "x": coords[:, 0],
             "y": coords[:, 1],
             "z": coords[:, 2]}
-    columns = ["atom index", "species", "x", "y", "z", "angular defect", 
-               "haddon", "improper angle", "dist. from ave. plane", 
+    columns = ["atom index", "species", "x", "y", "z", "angular defect",
+               "haddon", "improper angle", "dist. from ave. plane",
                "neighbors", "ave. neighb. dist."]
 
     for iat in range(natom):
