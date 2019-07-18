@@ -7,7 +7,32 @@
 This application aims to visualize local geometric informations about a
 molecular structure. In particular, the application computes geometric
 quantities which provide an insight of the discrete curvature of a molecular
-structure. In addition, from upload or by editing the table, you can visualize any atomic properties.
+structure. In addition, from upload or by editing the table, you can visualize 
+any atomic properties.
+
+### Global overview
+
+The tools on the right control the visualization. The options on the left
+allow to select the column displayed in the table.
+
+#### On the left
+
+* The dashed box allows to upload the xyz file.
+* The *"Select data"* menu, allows to select the data you want to visualize on 
+the structure.
+* The *"Select colormap"* menu, changes the colormap. The `_r` label 
+corresponds to colormap in inverse order.
+* The *"colormap boundaries"* inputs change the min and max values used to 
+compute the colors associated to the data.
+
+#### On the right
+
+The right panel displays a table of the data. Select the columns you want to 
+show using the check boxes. The value in the table can be modified and the 
+visualization is updated each time you modify a value.
+
+If you want to add manualy custom data, you can add the `custom` column to the
+table and fill it with your values.
 
 ### Geometrical data
 
@@ -55,10 +80,6 @@ an atomic properties with name `prop0`:
 The number of provided data must be the same on each line. If this is not the
 case, only the structure is read.
 
-### Data modifications
-
-The data table is editable and the visualization is updated each time you modify
-a value.
 """
 
 import io
@@ -116,16 +137,8 @@ footer = html.Div(className="foot", children=[
         html.Div(className="about", children=[
             html.H5("About:"),
             html.P([
-                # html.Span(className="fas fa-user"), " ",
                 html.A("Germain Salvato Vallverdu",
                        href="https://gsalvatovallverdu.gitlab.io/")]),
-            # html.P([
-            #     html.A([html.Span(className="fab fa-github"), " @gvallverdu"],
-            #            href="https://github.com/gVallverdu"),
-            #     " / ",
-            #     html.A([html.Span(className="fab fa-twitter"), " @gvallverdu"],
-            #            href="https://twitter.com/gvallverdu")
-            # ]),
             html.P(
                 html.A(href="https://www.univ-pau.fr", children=[
                     "University of Pau & Pays Adour"
@@ -174,7 +187,7 @@ body = html.Div(className="container", children=[
                     placeholder="Select data"
                 ),
 
-                # --- select colorscale
+                # --- select colormap
                 html.Div(className="control-label",
                          children="Select colormap"),
                 dcc.Dropdown(
@@ -184,11 +197,22 @@ body = html.Div(className="container", children=[
                              for cm in plt.cm.cmap_d],
                     value="cividis"
                 ),
+
+                # --- colormap boundaries
+                html.Div(className="control-label", 
+                         children="Colormap boundaries"),
+                html.Div(className="control", children=[
+                    dcc.Input(id="cm-min-value", type="number", debounce=True,
+                              placeholder=0),
+                    dcc.Input(id="cm-max-value", type="number", debounce=True,
+                              placeholder=0),                    
+                ]),
+
                 html.P("Click on atoms to highlight the corresponding lines"
                        " in the table on the right."),
             ]),
+            dcc.Graph(id='colorbar', config=dict(displayModeBar=False)),
             html.Div(id="dash-bio-viewer"),
-            dcc.Graph(id='colorbar', config=dict(displayModeBar=False))
         ]),
 
         # --- Data table
@@ -385,21 +409,32 @@ def highlight_selected_atoms(atom_ids):
     Output('molecule-viewer', 'styles'),
     [Input('dropdown-data', 'value'),
      Input('dropdown-colormap', "value"),
-     Input("data-storage", "modified_timestamp")],
+     Input("data-storage", "modified_timestamp"),
+     Input("cm-min-value", "value"),
+     Input("cm-max-value", "value"),],
     [State("data-storage", "data")]
 )
-def map_data_on_atoms(selected_data, cm_name, ts, data):
+def map_data_on_atoms(selected_data, cm_name, ts, cm_min, cm_max, data):
     """
-    Map the selected data on the structure using a colorscale to draw the atoms.
+    Map the selected data on the structure using a colormap.
     """
 
     df = pd.DataFrame(data)
 
     if selected_data:
-        normalize = mpl.colors.Normalize(df[selected_data].min(),
-                                         df[selected_data].max())
+        values = df[selected_data].values
+        minval, maxval = np.nanmin(values), np.nanmax(values)
+
+        # get cm boundaries values from inputs if they exist
+        if cm_min:
+            minval = cm_min
+        if cm_max:
+            maxval = cm_max
+
+        normalize = mpl.colors.Normalize(minval, maxval)
+
         cm = plt.cm.get_cmap(cm_name)
-        norm_cm = cm(X=normalize(df[selected_data].values), alpha=1)
+        norm_cm = cm(X=normalize(values), alpha=1)
         colors = [mpl.colors.rgb2hex(color) for color in norm_cm]
         styles_data = {
             str(iat): {
@@ -425,10 +460,12 @@ def map_data_on_atoms(selected_data, cm_name, ts, data):
     Output("colorbar", "figure"),
     [Input('dropdown-data', 'value'),
      Input('dropdown-colormap', 'value'),
-     Input("data-storage", "modified_timestamp")],
+     Input("data-storage", "modified_timestamp"),
+     Input("cm-min-value", "value"),
+     Input("cm-max-value", "value"),],
     [State("data-storage", "data")]
 )
-def plot_colorbar(selected_data, cm_name, data_ts, data):
+def plot_colorbar(selected_data, cm_name, data_ts, cm_min, cm_max, data):
     """
     Display a colorbar according to the selected data mapped on to the structure.
     """
@@ -437,6 +474,13 @@ def plot_colorbar(selected_data, cm_name, data_ts, data):
         # get data and boundaries
         values = pd.DataFrame(data)[selected_data].values
         minval, maxval = np.nanmin(values), np.nanmax(values)
+
+        # get cm boundaries values from inputs if they exist
+        if cm_min:
+            minval = cm_min
+
+        if cm_max:
+            maxval = cm_max
 
         # set up fake data and compute corresponding colors
         npts = 100
