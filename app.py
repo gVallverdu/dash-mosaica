@@ -4,9 +4,12 @@
 """
 ## Documentation
 
-This application aims to visualize structural data in order to provide a geometrical
-analysis of a molecular strucutre. It also provides a way to visualize any 
-atomic quantities.
+This application aims to visualize local geometric informations about a
+molecular structure. In particular, the application computes geometric
+quantities which provide an insight of the discrete curvature of a molecular
+structure. In addition, from upload or by editing the table, you can visualize any atomic properties.
+
+### Geometrical data
 
 The definitions of the geometrical data available by default are given below.
 Some of them are available only if there is a minimum number of bonds:
@@ -15,7 +18,7 @@ Some of them are available only if there is a minimum number of bonds:
 on a given atom. It is computed as360° minus the sum of the angles between bonds with atoms
 bonded to the considered atom.
 * **haddon (degrees):** This is the pyramidalization angle as defined by 
-Haddon et. al. [ref]
+[R.C. Haddon, _C60: Sphere or Polyhedron?_, J. Am. Chem. Soc. **1997**](https://pubs.acs.org/doi/10.1021/ja9637659)
 * **improper angle (degrees):** This is the improper dihedral angle
 * **dist. from. ave. plane (angstrom):** This is the distance between the
 considered atom and the average plane defined by atoms bonded to it.
@@ -23,11 +26,39 @@ considered atom and the average plane defined by atoms bonded to it.
 * **ave. neighb. dist. (angstrom):** This is the average distance between the 
 considered atom and its neighbors.
 
-### File upload
+### File and data upload
 
-The application accepts standard xyz files. The first line of the file must
-contains the number of atom, the second line is a title (not considered here) and
-the following lines start by the element name followed by the cartesian coordinates.
+The application accepts standard xyz files.
+Such a file is suposed to display the number of atoms on the first line,
+followed by a title line and followed by the structure in cartesian
+coordinates. Each line contains the element as first column and the
+cartesian coordinates as 2d, 3th and 4th columns, for example:
+
+    3
+    H2O molecule
+    O   -0.111056  0.033897  0.043165
+    H    0.966057  0.959148 -1.089095
+    H    0.796629 -1.497157  0.403985
+
+
+If additional data are provided on each line, they are returned as
+atomic properties and can be visualized. The names of theses additional atomic
+properties are `propX`, `X` being a number. For example, the file below will provide
+an atomic properties with name `prop0`:
+
+    3
+    H2O molecule
+    O   -0.111056  0.033897  0.043165   -1.8
+    H    0.966057  0.959148 -1.089095    0.9
+    H    0.796629 -1.497157  0.403985    0.9
+
+The number of provided data must be the same on each line. If this is not the
+case, only the structure is read.
+
+### Data modifications
+
+The data table is editable and the visualization is updated each time you modify
+a value.
 """
 
 import io
@@ -52,38 +83,6 @@ __author__ = "Germain Salvato Vallverdu"
 __title__ = "Structural data viewer"
 __subtitle__ = "Part of the Mosaica project"
 
-# plotly colorscales
-# must be lowercase for matplotlib
-COLORSCALES = ["Blues",
-               "Blues_r"
-               "Greens",
-               "Greens_r",
-               "Greys",
-               "Greys_r",
-               "hot",
-               "hot_r",
-               "jet",
-               "jet_r",
-               "inferno",
-               "inferno_r",
-               "magma",
-               "magma_r",
-               "plasma",
-               "plasma_r",
-               "rainbow",
-               "rainbow_r",
-               "RdBu",
-               "RdBu_r",
-               "Reds",
-               "Reds_r",
-               "viridis",
-               "viridis_r",
-               "cividis",
-               "cividis_'",
-               "YlGnBu",
-               "YlGnBu_r",
-               "YlOrRd",
-               "YlOrRd_r"]
 
 # ---- Set up App ----
 ext_css = ["https://use.fontawesome.com/releases/v5.8.1/css/all.css"]
@@ -102,8 +101,8 @@ header = html.Div(className="head", children=[
     html.H1(children=[html.Span(className="fas fa-atom"), " ", __title__]),
     # html.H2(__subtitle__)
     html.A(
-        id="github-link", 
-        href="https://github.com/gVallverdu/dash-mosaica", 
+        id="github-link",
+        href="https://github.com/gVallverdu/dash-mosaica",
         children=[
             "View on GitHub",
         ]
@@ -118,7 +117,7 @@ footer = html.Div(className="foot", children=[
             html.H5("About:"),
             html.P([
                 # html.Span(className="fas fa-user"), " ",
-                html.A("Germain Salvato Vallverdu", 
+                html.A("Germain Salvato Vallverdu",
                        href="https://gsalvatovallverdu.gitlab.io/")]),
             # html.P([
             #     html.A([html.Span(className="fab fa-github"), " @gvallverdu"],
@@ -198,13 +197,9 @@ body = html.Div(className="container", children=[
             html.Div(className="control-panel", children=[
                 html.Div(className="column-selector-label",
                          children="Select the columns of the table:"),
-                # dcc.Dropdown(
-                #     id="data-column-selector",
-                #     multi=True,
-                # ),
                 dcc.Checklist(
                     id="data-column-selector",
-                    values=[],
+                    value=[],
                     inputClassName="checklist-item",
                     labelClassName="checklist-label",
                 ),
@@ -251,76 +246,105 @@ app.layout = html.Div([header, body, footer])
      Output("dash-bio-viewer", "children"),
      Output("dropdown-data", "options"),
      Output("data-column-selector", "options"),
-     Output("data-column-selector", "values")],
-    [Input("file-upload", "contents")]
+     Output("data-column-selector", "value")],
+    [Input("file-upload", "contents"),
+     Input('data-table', 'data_timestamp')],
+    [State("data-storage", "data"),
+     State("data-table", "data"),
+     State("data-column-selector", "value"),
+     State("dash-bio-viewer", "children")
+     ]
 )
-def upload_data(content):
+def upload_data(content, table_ts, stored_data, table_data, selected_columns,
+                dbviewer):
     """
     Uploads the data from an xyz file and store them in the store component.
     Then set up the dropdowns, the table and the molecule viewer.
     """
 
-    # read file
-    if content:
-        content_type, content_str = content.split(",")
-        decoded = base64.b64decode(content_str).decode("utf-8")
-        fdata = io.StringIO(decoded)
-        species, coords, atomic_prop = utils.read_xyz(fdata)
+    if table_ts is not None:
+        # update stored data from current data in the table
+        df = pd.DataFrame(stored_data)
+        try:
+            table_df = pd.DataFrame(table_data)
+            table_df = table_df.astype({col: np.float for col in table_df
+                                        if col != "species"})
+            df.update(table_df)
+        except ValueError:
+            print("No update of data")
+            
+
+        all_data = df.to_dict("records")
 
     else:
-        # filename = app.get_asset_url("data/C28-D2.xyz")
-        filename = "assets/data/isomereB.xyz"
-        with open(filename, "r") as f:
-            species, coords, atomic_prop = utils.read_xyz(f)
+        # Initial set up, read data from upload
 
-    # comute data
-    df, distances = utils.compute_data(species, coords)
-    if atomic_prop:
-        df_prop = pd.DataFrame(atomic_prop, index=df.index)
-        df = pd.merge(df, df_prop, left_index=True, right_index=True)
-    
-    model_data = utils.get_molecular_data(species, coords)
-    # if "custom" not in df:
-    #     df["custom"] = 0.0
+        # read file
+        if content:
+            content_type, content_str = content.split(",")
+            decoded = base64.b64decode(content_str).decode("utf-8")
+            fdata = io.StringIO(decoded)
+            species, coords, atomic_prop = utils.read_xyz(fdata)
 
-    # all data for the store component
-    all_data = df.to_dict("records")
+        else:
+            # filename = app.get_asset_url("data/C28-D2.xyz")
+            filename = "assets/data/isomereB.xyz"
+            with open(filename, "r") as f:
+                species, coords, atomic_prop = utils.read_xyz(f)
 
-    # Set the molecule 3D Viewer component
-    dbviewer = dash_bio.Molecule3dViewer(
-        id='molecule-viewer',
-        backgroundColor="#FFFFFF",
-        # backgroundOpacity='0',
-        modelData=model_data,
-        atomLabelsShown=True,
-        selectionType='atom'
-    )
+        # comute data
+        df, distances = utils.compute_data(species, coords)
+        if atomic_prop:
+            df_prop = pd.DataFrame(atomic_prop, index=df.index)
+            df = pd.merge(df, df_prop, left_index=True, right_index=True)
 
-    # options for the checklist in order to select the columns of the table
-    tab_options = [{"label": name, "value": name} for name in df]
-    # tab_options.append({"label": "custom", "value": "custom"})
-    values = ["atom index", "species", "angular defect", "haddon", "neighbors"]
+        model_data = utils.get_molecular_data(species, coords)
+        # if "custom" not in df:
+        #     df["custom"] = 0.0
+
+        # all data for the store component
+        all_data = df.to_dict("records")
+
+        # Set the molecule 3D Viewer component
+        dbviewer = dash_bio.Molecule3dViewer(
+            id='molecule-viewer',
+            backgroundColor="#FFFFFF",
+            # backgroundOpacity='0',
+            modelData=model_data,
+            atomLabelsShown=True,
+            selectionType='atom'
+        )
+
+        # options for the checklist in order to select the columns of the table
+        selected_columns = ["atom index", "species", "angular defect",
+                            "haddon", "neighbors"]
 
     # options to select data mapped on atoms
     options = [{"label": name, "value": name} for name in df
                if name not in ["atom index", "species"]]
     # options.append({"label": "custom", "value": "custom"})
 
-    return all_data, dbviewer, options, tab_options, values
+    # checklist options to select table columns
+    tab_options = [{"label": name, "value": name} for name in df]
+    # tab_options.append({"label": "custom", "value": "custom"})
+
+    return all_data, dbviewer, options, tab_options, selected_columns
+
 
 @app.callback(
     [Output("data-table", "data"),
      Output("data-table", "columns")],
     [Input("data-storage", "modified_timestamp"),
-     Input("data-column-selector", "values")],
+     Input("data-column-selector", "value")],
     [State("data-storage", "data")]
 )
-def set_table_columns(ts, values, data):
+def select_table_columns(ts, values, data):
     """
     Select columns displayed in the table. A custom column is available and 
     filled with zero by default.
     """
-    # get data from Store
+
+    # get data from the Store component
     df = pd.DataFrame(data)
 
     if values is None:
@@ -360,10 +384,11 @@ def highlight_selected_atoms(atom_ids):
 @app.callback(
     Output('molecule-viewer', 'styles'),
     [Input('dropdown-data', 'value'),
-     Input('dropdown-colormap', "value")],
+     Input('dropdown-colormap', "value"),
+     Input("data-storage", "modified_timestamp")],
     [State("data-storage", "data")]
 )
-def map_data_on_atoms(selected_data, cm_name, data):
+def map_data_on_atoms(selected_data, cm_name, ts, data):
     """
     Map the selected data on the structure using a colorscale to draw the atoms.
     """
@@ -399,10 +424,11 @@ def map_data_on_atoms(selected_data, cm_name, data):
 @app.callback(
     Output("colorbar", "figure"),
     [Input('dropdown-data', 'value'),
-     Input('dropdown-colormap', 'value')],
+     Input('dropdown-colormap', 'value'),
+     Input("data-storage", "modified_timestamp")],
     [State("data-storage", "data")]
 )
-def plot_colorbar(selected_data, cm_name, data):
+def plot_colorbar(selected_data, cm_name, data_ts, data):
     """
     Display a colorbar according to the selected data mapped on to the structure.
     """
@@ -427,7 +453,7 @@ def plot_colorbar(selected_data, cm_name, data):
             go.Contour(
                 z=[values, values],
                 x0=values.min(),
-                dx=(values.max() - values.min()) / npts,
+                dx=(values.max() - values.min()) / (npts - 1),
                 colorscale=colors,
                 autocontour=False,
                 showscale=False,

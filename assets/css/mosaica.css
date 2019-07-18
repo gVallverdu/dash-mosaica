@@ -224,6 +224,23 @@ h2, h3, h4, h5, H6 {
   text-align: justify;
 }
 
+.documentation ul {
+  list-style: disc outside;
+  padding-left: 30px;
+}
+
+.documentation h3 {
+  margin-top: 1.8rem;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.documentation pre {
+  margin-bottom: 1em;
+  padding: 5px;
+  border: solid rgb(240, 240, 240) 2px;
+}
+
 .clearfix {
   border-top: 2px rgb(60, 99, 130) solid;
   clear: both;
