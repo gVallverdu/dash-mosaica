@@ -34,6 +34,8 @@ visualization is updated each time you modify a value.
 If you want to add manualy custom data, you can add the `custom` column to the
 table and fill it with your values.
 
+The whole data can be downloaded in csv format from the button at the top.
+
 ### Geometrical data
 
 The definitions of the geometrical data available by default are given below.
@@ -84,6 +86,7 @@ case, only the structure is read.
 
 import io
 import base64
+import urllib
 
 import dash
 import dash_table
@@ -199,13 +202,13 @@ body = html.Div(className="container", children=[
                 ),
 
                 # --- colormap boundaries
-                html.Div(className="control-label", 
+                html.Div(className="control-label",
                          children="Colormap boundaries"),
                 html.Div(className="control", children=[
                     dcc.Input(id="cm-min-value", type="number", debounce=True,
                               placeholder=0),
                     dcc.Input(id="cm-max-value", type="number", debounce=True,
-                              placeholder=0),                    
+                              placeholder=0),
                 ]),
 
                 html.P("Click on atoms to highlight the corresponding lines"
@@ -217,6 +220,12 @@ body = html.Div(className="container", children=[
 
         # --- Data table
         html.Div(id="data-table-container", children=[
+            html.A(
+                html.Button("Download data", id="download-button"),
+                id="download",
+                download="rawdata.csv",  href="",
+                target="_blank",
+            ),
             html.H4("Data Table"),
             html.Div(className="control-panel", children=[
                 html.Div(className="column-selector-label",
@@ -296,7 +305,6 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
             df.update(table_df)
         except ValueError:
             print("No update of data")
-            
 
         all_data = df.to_dict("records")
 
@@ -322,9 +330,10 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
             df_prop = pd.DataFrame(atomic_prop, index=df.index)
             df = pd.merge(df, df_prop, left_index=True, right_index=True)
 
+        if "custom" not in df:
+            df["custom"] = 0.0
+
         model_data = utils.get_molecular_data(species, coords)
-        # if "custom" not in df:
-        #     df["custom"] = 0.0
 
         # all data for the store component
         all_data = df.to_dict("records")
@@ -346,11 +355,9 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
     # options to select data mapped on atoms
     options = [{"label": name, "value": name} for name in df
                if name not in ["atom index", "species"]]
-    # options.append({"label": "custom", "value": "custom"})
 
     # checklist options to select table columns
     tab_options = [{"label": name, "value": name} for name in df]
-    # tab_options.append({"label": "custom", "value": "custom"})
 
     return all_data, dbviewer, options, tab_options, selected_columns
 
@@ -411,7 +418,7 @@ def highlight_selected_atoms(atom_ids):
      Input('dropdown-colormap', "value"),
      Input("data-storage", "modified_timestamp"),
      Input("cm-min-value", "value"),
-     Input("cm-max-value", "value"),],
+     Input("cm-max-value", "value")],
     [State("data-storage", "data")]
 )
 def map_data_on_atoms(selected_data, cm_name, ts, cm_min, cm_max, data):
@@ -462,7 +469,7 @@ def map_data_on_atoms(selected_data, cm_name, ts, cm_min, cm_max, data):
      Input('dropdown-colormap', 'value'),
      Input("data-storage", "modified_timestamp"),
      Input("cm-min-value", "value"),
-     Input("cm-max-value", "value"),],
+     Input("cm-max-value", "value")],
     [State("data-storage", "data")]
 )
 def plot_colorbar(selected_data, cm_name, data_ts, cm_min, cm_max, data):
@@ -529,6 +536,31 @@ def plot_colorbar(selected_data, cm_name, data_ts, cm_min, cm_max, data):
         )
 
     return figure
+
+
+@app.callback(Output('download', 'href'),
+              [Input('data-storage', 'modified_timestamp')],
+              [State("data-storage", "data")])
+def update_download_button(ts, data):
+    """
+    Return a link with the data in csv format.
+    """
+
+    if ts is not None:
+        df = pd.DataFrame(data)
+
+        # put atom index, species, and coordinates as first columns
+        first_columns = ["atom index", "species", "x", "y", "z"]
+        columns = df.columns.drop(first_columns)
+        df = df[first_columns + list(columns)]
+
+        csv_string = df.to_csv(index=False, encoding="utf-8")
+        csv_string = "data:text/csv;charset=utf-8," + \
+            urllib.parse.quote(csv_string)
+        return csv_string
+
+    else:
+        return "#"
 
 
 if __name__ == '__main__':
