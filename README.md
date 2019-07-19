@@ -7,7 +7,7 @@ This application aims to visualize structural data in order to provide a geometr
 analysis of a molecular structure. It also provides a way to visualize any 
 atomic quantities.
 
-![](./screenshot.png")
+![](./screenshot.png)
 
 ## TODO
 
