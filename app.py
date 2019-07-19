@@ -32,7 +32,8 @@ show using the check boxes. The value in the table can be modified and the
 visualization is updated each time you modify a value.
 
 If you want to add manualy custom data, you can add the `custom` column to the
-table and fill it with your values.
+table and fill it with your values. You can copy and pasta data from a 
+spreadsheet or a text file.
 
 The whole data can be downloaded in csv format from the button at the top.
 
@@ -245,6 +246,7 @@ body = html.Div(className="container", children=[
                 dash_table.DataTable(
                     id="data-table",
                     editable=True,
+                    row_selectable="multi",
                     style_cell={'minWidth': '60px', 'whiteSpace': 'normal'},
                     style_header={
                         'backgroundColor': 'white',
@@ -301,7 +303,6 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
     """
 
     if table_ts is not None:
-        print("UPDATE STORE")
         # update stored data from current data in the table
         df = pd.DataFrame(stored_data)
         try:
@@ -316,7 +317,7 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
 
     else:
         # Initial set up, read data from upload
-        print("INITIAL SETUP")
+
         # read file
         if content:
             content_type, content_str = content.split(",")
@@ -397,7 +398,7 @@ def select_table_columns(ts, values, data):
         for column in tab_df:
             if column in {"atom index", "species", "neighbors", "custom"}:
                 columns.append({"name": column, "id": column})
-            elif column[:5] == "prop":
+            elif column[:4] == "prop":
                 columns.append({"name": column, "id": column})
             else:
                 columns.append({
@@ -412,12 +413,14 @@ def select_table_columns(ts, values, data):
 
 
 @app.callback(
-    Output("data-table", "style_data_conditional"),
+    [Output("data-table", "style_data_conditional"),
+     Output("data-table", "selected_rows")],
     [Input("molecule-viewer", "selectedAtomIds")]
 )
-def highlight_selected_atoms(atom_ids):
+def select_rows_from_atoms(atom_ids):
     """
-    Highlights the columns corresponding to the selected atoms.
+    Highlights the rows corresponding to the selected atoms in the molecule
+    viewer.
     """
 
     style_data_conditional = [{'if': {'row_index': 'odd'},
@@ -430,7 +433,22 @@ def highlight_selected_atoms(atom_ids):
                 "color": "white",
             })
 
-    return style_data_conditional
+    return style_data_conditional, list(atom_ids)
+
+
+# @app.callback(
+#     Output("molecule-viewer", "selectedAtomIds"),
+#     [Input("data-table", "selected_rows")]
+# )
+# def select_atom_from_table(rows):
+#     """
+#     Select atom from rows selected in the table
+#     """
+#     if rows:
+#         print(rows)
+#         return list(rows)
+#     else:
+#         return []
 
 
 @app.callback(
