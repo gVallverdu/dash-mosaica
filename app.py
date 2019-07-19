@@ -36,6 +36,9 @@ table and fill it with your values.
 
 The whole data can be downloaded in csv format from the button at the top.
 
+**Warning:** If you edit the data in the table, you have first to refresh the
+application before uploading a new molecule.
+
 ### Geometrical data
 
 The definitions of the geometrical data available by default are given below.
@@ -90,6 +93,7 @@ import urllib
 
 import dash
 import dash_table
+from dash_table.Format import Format, Scheme
 import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output, State
@@ -241,22 +245,23 @@ body = html.Div(className="container", children=[
                 dash_table.DataTable(
                     id="data-table",
                     editable=True,
-                    style_cell={'maxWidth': '60px',
-                                'width': '60px',
-                                'minWidth': '60px',
-                                'whiteSpace': 'normal'},
-                    style_header={'backgroundColor': 'rgba(60, 93, 130, .25)',
-                                  'fontWeight': 'bold',
-                                  "border": "1px solid gray",
-                                  "fontFamily": "sans-serif"},
-                    style_data_conditional=[{'if': {'row_index': 'odd'},
-                                             'backgroundColor': 'rgba(60, 93, 130, .05)'}],
-                    style_data={'border': '1px solid gray'},
+                    style_cell={'minWidth': '60px', 'whiteSpace': 'normal'},
+                    style_header={
+                        'backgroundColor': 'white',
+                        "padding": "5px",
+                        'fontWeight': 'bold',
+                        "textAlign": "center",
+                        "borderBottom": "2px solid rgb(60, 93, 130)",
+                        "borderTop": "2px solid rgb(60, 93, 130)",
+                        "fontFamily": "sans-serif"},
+                    style_data_conditional=[{
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgba(60, 93, 130, .05)'
+                    }],
                     style_table={"overflowX": "scroll",
                                  "maxHeight": "700px",
                                  "overflowY": "scroll"},
-                    # need higher version of dash_table, incompatible with dash-bio
-                    # fixed_rows={'headers': True, 'data': 0}
+                    fixed_rows={'headers': True, 'data': 0}
                 )
             ]),
         ])
@@ -296,6 +301,7 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
     """
 
     if table_ts is not None:
+        print("UPDATE STORE")
         # update stored data from current data in the table
         df = pd.DataFrame(stored_data)
         try:
@@ -310,7 +316,7 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
 
     else:
         # Initial set up, read data from upload
-
+        print("INITIAL SETUP")
         # read file
         if content:
             content_type, content_str = content.split(",")
@@ -320,7 +326,7 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
 
         else:
             # filename = app.get_asset_url("data/C28-D2.xyz")
-            filename = "assets/data/isomereB.xyz"
+            filename = "assets/data/C28-D2.xyz"
             with open(filename, "r") as f:
                 species, coords, atomic_prop = utils.read_xyz(f)
 
@@ -384,8 +390,23 @@ def select_table_columns(ts, values, data):
     else:
         # fill the table with the selected columns
         tab_df = df[values]
-        columns = [{"name": i, "id": i} for i in tab_df]
         data = tab_df.to_dict("records")
+
+        # add format
+        columns = list()
+        for column in tab_df:
+            if column in {"atom index", "species", "neighbors", "custom"}:
+                columns.append({"name": column, "id": column})
+            elif column[:5] == "prop":
+                columns.append({"name": column, "id": column})
+            else:
+                columns.append({
+                    "name": column, "id": column, "type": "numeric",
+                    "format": Format(
+                        precision=4,
+                        scheme=Scheme.fixed,
+                    )
+                })
 
         return data, columns
 
