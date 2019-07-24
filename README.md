@@ -1,7 +1,7 @@
 # dash-mosaica
 
 
-Dash application for the Mosaica project
+Dash application for the Mosaica project: https://pychemapps.univ-pau.fr/mosaica/
 
 This application aims to visualize structural data in order to provide a geometrical
 analysis of a molecular structure. It also provides a way to visualize any 
