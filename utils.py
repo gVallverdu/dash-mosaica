@@ -233,7 +233,7 @@ def compute_data(species, coords, rcut=2.5, distances=None):
     # dict of data to set up the dataframe
     natom = len(species)
     columns = ["atom index", "species", "x", "y", "z", "angular defect",
-               "pyrA", "improper", "spherical curvature", 
+               "Pyr(A)", "improper", "spherical curvature", 
                "c_pi^2", "lambda_pi^2", "m", "n",
                "dist. from ave. plane", "n_neighbors", "ave. neighb. dist."]
     data = pd.DataFrame(columns=columns)
@@ -274,7 +274,7 @@ def compute_data(species, coords, rcut=2.5, distances=None):
         # compute data if the number of neighbors is relevant
         if n_neighbors == 3:
             pyrA = curvature.get_pyr_angle(atom_a, star_a)
-            line["pyrA"] = pyrA
+            line["Pyr(A)"] = pyrA
             line["improper"] = curvature.get_improper(atom_a, star_a)
             line["spherical curvature"] = \
                 curvature.get_spherical_curvature(atom_a, star_a)

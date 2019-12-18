@@ -357,7 +357,7 @@ def upload_data(content, table_ts, stored_data, table_data, selected_columns,
 
         # options for the checklist in order to select the columns of the table
         selected_columns = ["atom index", "species", "angular defect",
-                            "haddon", "neighbors"]
+                            "Pyr(A)", "n_neighbors"]
 
     # options to select data mapped on atoms
     options = [{"label": name, "value": name} for name in df
