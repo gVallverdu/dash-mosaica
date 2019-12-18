@@ -9,6 +9,7 @@ curvature is defined as the angular defect around a given vertex.
 
 import numpy as np
 import pandas as pd
+import curvature
 
 __author__ = "Germain Salvato Vallverdu"
 __copyright__ = ""
@@ -17,8 +18,9 @@ __maintainer__ = "Germain Salvato Vallverdu"
 __email__ = "germain.vallverdu@univ-pau.fr"
 
 units = {"angular defect": "(degrees)",
-         "haddon": "(degrees)",
-         "improper angle": "(degrees)",
+         "Pyr(A)": "(degrees)",
+         "spherical curvature": "(A-1)",
+         "improper": "(degrees)",
          "distance from average plane": "(A)",
          "distances with neighbors": "(A)",
          "atom index": ""}
@@ -155,7 +157,7 @@ def read_xyz(file):
     return species, np.array(coords, dtype=np.float), atomic_prop
 
 
-def get_molecular_data(species, coords, rcut=2.0):
+def get_molecular_data(species, coords, rcut=2.5):
     """ 
     Set up the molecular data dictionnary from the species and the 
     coordinates of a molecules. Bonds are defined from a cutoff distance. If
@@ -197,15 +199,23 @@ def get_molecular_data(species, coords, rcut=2.0):
     return model_data
 
 
-def compute_data(species, coords, rcut=2.0, distances=None):
+def compute_data(species, coords, rcut=2.5, distances=None):
     """
     Compute the data over the whole molecule. For each atom, the following data 
     are computed:
-    * discrete curvature (angular defect)
-    * haddon definition of curvature
-    * improper angle
-    * distance from the nearest plane of neighbors
+    * pyramidalization angle, Pyr(A) (degrees)
+    * angular defect (degrees)
+    * spherical curvature, kappa, (A^-1)
+    * improper angle (degrees)
+    * distance from the average plane of neighbors
     * the average distances with neighbors
+    * the number of neighbors
+    * hybridization coefficients c_pi^2 and lambda_pi^2
+    * hybridization numbers, m and n
+
+    if the number of neighbors > 3, the function only computes the angular 
+    defect, the average distances with neighbors and the distance from the 
+    average plane.
 
     Args:
         species (list): list of elements as string
@@ -222,236 +232,70 @@ def compute_data(species, coords, rcut=2.0, distances=None):
 
     # dict of data to set up the dataframe
     natom = len(species)
-    data = {"angular defect": list(),
-            "haddon": list(),
-            "improper angle": list(),
-            "dist. from ave. plane": list(),
-            "ave. neighb. dist.": list(),
-            "neighbors": list(),
-            "atom index": np.arange(1, natom + 1).tolist(),
-            "species": species,
-            "x": coords[:, 0],
-            "y": coords[:, 1],
-            "z": coords[:, 2]}
     columns = ["atom index", "species", "x", "y", "z", "angular defect",
-               "haddon", "improper angle", "dist. from ave. plane",
-               "neighbors", "ave. neighb. dist."]
+               "pyrA", "improper", "spherical curvature", 
+               "c_pi^2", "lambda_pi^2", "m", "n",
+               "dist. from ave. plane", "n_neighbors", "ave. neighb. dist."]
+    data = pd.DataFrame(columns=columns)
+    # data = {
+    #     "atom index": np.arange(1, natom + 1).tolist(),
+    #     "species": species,
+    #     "x": coords[:, 0],
+    #     "y": coords[:, 1],
+    #     "z": coords[:, 2]
+    # }
+    # data.update({c: np.full(natom, np.nan) for c in columns[5:]})
 
     for iat in range(natom):
-        sites = coords[iat, :]
+        # atom A
+        atom_a = coords[iat, :]
+        line = {"atom index": iat + 1, "species": species[iat]}
+        line.update({x: coords[iat, i] for i, x in enumerate("xyz")})
 
-        # look for neighbors
-        n = 0
+        # look for atoms of *(A)
+        n_neighbors = 0
         ave_distance = 0
+        star_a = list()
         for jat in range(natom):
-            if jat == iat:
+            if jat == iat:  # skip current atom
                 continue
 
             rc = get_bond_cutoff(species[iat], species[jat], rcut)
             if distances[iat, jat] < rc:
-                sites = np.row_stack((sites, coords[jat, :]))
-                n += 1
+                star_a.append(coords[jat, :])
+                n_neighbors += 1
                 ave_distance += distances[iat, jat]
+        
+        star_a = np.array(star_a, dtype=np.float)
 
         # number of neighbors
-        data["neighbors"].append(n)
+        line["n_neighbors"] = n_neighbors
 
         # compute data if the number of neighbors is relevant
-        if n == 3:
-            data["haddon"].append(get_haddon(sites)[0])
-            data["improper angle"].append(
-                np.abs(get_improper(sites)))
-        else:
-            data["haddon"].append(np.nan)
-            data["improper angle"].append(np.nan)
+        if n_neighbors == 3:
+            pyrA = curvature.get_pyr_angle(atom_a, star_a)
+            line["pyrA"] = pyrA
+            line["improper"] = curvature.get_improper(atom_a, star_a)
+            line["spherical curvature"] = \
+                curvature.get_spherical_curvature(atom_a, star_a)
+            
+            c_pi, lambda_pi = curvature.get_hybridization_coeff(pyrA)
+            line["c_pi^2"] = c_pi ** 2
+            line["lambda_pi^2"] = lambda_pi ** 2
+            m, n = curvature.get_hybridization_numbers(pyrA)
+            line["m"] = m
+            line["n"] = n
 
-        if n >= 3:
-            data["dist. from ave. plane"].append(
-                np.abs(get_pyramidalization(sites)))
-            data["angular defect"].append(
-                get_discrete_curvature(sites))
-        else:
-            data["dist. from ave. plane"].append(np.nan)
-            data["angular defect"].append(np.nan)
+        if n_neighbors >= 3:
+            line["dist. from ave. plane"] = curvature.get_pyr_distance(atom_a, star_a)
+            line["angular defect"] = curvature.get_angular_defect(atom_a, star_a)
 
-        if n >= 1:
-            data["ave. neighb. dist."].append(ave_distance / n)
-        else:
-            data["ave. neighb. dist."].append(np.nan)
+        if n_neighbors >= 1:
+            line["ave. neighb. dist."] = ave_distance / n_neighbors
 
-    df = pd.DataFrame(data, columns=columns)
-    df.set_index(df["atom index"], inplace=True)
+        data.loc[iat] = line
+    # data["n_neighbors"] = data["n_neighbors"].astype(np.integer, copy=False)
+    # df = pd.DataFrame(data, columns=columns)
+    # df.set_index(df["atom index"], inplace=True)
 
-    return df, distances
-
-
-def get_improper(coords):
-    """
-    Assuming i is bonded to j, k and l, compute the improper angle between planes
-    defined by (i, j, k) and (j, k, l).
-
-
-                  l
-                  |
-                  i
-                 / \
-                j   k
-
-    Args:
-        coords (4 x 3 array): Coordinnates of point i, j, k and l. i must be the first
-
-    Returns:
-        improper angle (degrees)
-    """
-
-    coords = np.array(coords)
-    if coords.shape != (4, 3):
-        raise ValueError("The shape of the input coordinates must be (4, 3) "
-                         "corresponding to 4 poinst in R^3.")
-
-    icoords, jcoords, kcoords, lcoords = coords
-
-    v1 = kcoords - lcoords
-    v2 = jcoords - kcoords
-    v3 = icoords - jcoords
-    v23 = np.cross(v2, v3)  # perpendicular to j, k, l
-    v12 = np.cross(v1, v2)  # perpendicular to i, j, k
-
-    theta = np.arctan2(np.linalg.norm(v2) * np.dot(v1, v23), np.dot(v12, v23))
-
-    return np.degrees(theta)
-
-
-def get_pyramidalization(coords):
-    """
-    Assuming the first point is linked to the following, compute the distance
-    from the average plane defined by points coords[1:, :].
-
-    Args:
-        coords (N x 3 array): Coordinnates of the in R^3. The distance is compute
-            between the first one and the plane defined by the followings.
-
-    Returns:
-        distance (float)
-    """
-
-    coords = np.array(coords)
-    if coords.shape[0] < 4:
-        raise ValueError(
-            "Input coordinates must correspond to at least 4 points in R^3.")
-    if coords.shape[1] != 3:
-        raise ValueError("Input coordinates must correspond to point in R^3.")
-
-    # barycenter of the points
-    G = coords[1:, :].sum(axis=0) / coords[1:, :].shape[0]
-
-    # Cpmpute the best plane from SVD
-    _, _, (vecx, vecy, u_norm) = np.linalg.svd(coords[1:, :] - G)
-
-    return np.dot(coords[0, :] - G, u_norm)
-
-
-def get_haddon(coords):
-    """
-    Assuming the first point is linked to the followings, compute the pyramidalization
-    following the definition of Haddon et al. The angle of pyramidalization is
-    compute as the angle between the vector normal to the (j, k, l) plane and the
-    bonds between i and j, k and l.
-
-    Args:
-        coords (4 x 3 array): Coordinnates of the in R^3.
-
-    Returns:
-        list of float corresponding to the angles
-    """
-
-    coords = np.array(coords)
-    if coords.shape != (4, 3):
-        raise ValueError("The shape of the input coordinates must be (4, 3) "
-                         "corresponding to 4 poinst in R^3.")
-
-    # barycenter of the points
-    G = coords[1:, :].sum(axis=0) / coords[1:, :].shape[0]
-
-    # Cpmpute the best plane from SVD
-    _, _, (vecx, vecy, u_norm) = np.linalg.svd(coords[1:, :] - G)
-
-    # change the
-    GI = coords[0, :] - G
-    if np.dot(GI, u_norm) < 0:
-        u_norm = - u_norm
-
-    angles = list()
-    for coord in coords[1:]:
-        v = coord - coords[0, :]
-        v /= np.linalg.norm(v)
-        cos = np.dot(u_norm, v)
-        angles.append(np.degrees(np.arccos(cos)))
-
-    haddon = np.array(angles).mean() - 90.0
-
-    return haddon, angles
-
-
-def get_discrete_curvature(coords):
-    """
-    Compute the discrete curvature (angular defect) around a vertex of a set of
-    points in R^3. The function works for any number of points greater than 4:
-    one vertex and 3 points surrounding the vertex defining the edges. The needed
-    data are the list of the coordinates of the points, the first one being the
-    vertex's one.
-    The function first looks for the best fit plane of the points surrounding the
-    vertex and sorts that points in order to compute the angles between the edges
-    connected to the vertex and the the angular defect.
-
-    Args:
-        coords (ndarray N x 3): Coordinates of the points. The first one is the vertex.
-
-    Returns
-        curvature (float)
-    """
-    coords = np.array(coords)
-
-    if coords.shape[1] != 3:
-        raise ValueError("3D coordinates are needed.")
-
-    npts = coords.shape[0]
-    if npts < 4:
-        raise ValueError("Not enough points to compute curvature")
-
-    # barycenter of the points
-    G = coords[1:, :].sum(axis=0) / coords[1:, :].shape[0]
-
-    # Cpmpute the best plane from SVD
-    _, _, (vecx, vecy, u_norm) = np.linalg.svd(coords[1:, :] - G)
-
-    # compute all angles with vectorx
-    angles = list()
-    for points in coords[1:, :]:
-        u = points - G
-        u /= np.linalg.norm(u)
-
-        cos = np.dot(vecx, u)
-        if np.dot(vecy, u) > 0:
-            angles.append(np.degrees(np.arccos(cos)))
-        else:
-            angles.append(360 - np.degrees(np.arccos(cos)))
-
-    # sort points according to angles
-    idx = np.arange(1, npts)
-    idx = idx[np.argsort(angles)]
-    idx = np.append(idx, idx[0])
-
-    # compute curvature
-    curvature = 360
-    for i, j in np.column_stack([idx[:-1], idx[1:]]):
-        u = coords[i, :] - coords[0, :]
-        u /= np.linalg.norm(u)
-
-        v = coords[j, :] - coords[0, :]
-        v /= np.linalg.norm(v)
-
-        cos = np.dot(u, v)
-        curvature -= np.degrees(np.arccos(cos))
-
-    return curvature
+    return data, distances
