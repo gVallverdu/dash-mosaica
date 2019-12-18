@@ -45,23 +45,18 @@ def check_array(a, shape, dtype=np.float):
     try:
         a = np.asarray(a, dtype=dtype)
     except ValueError:
-        raise ValueError(f"Cannot convert {a} in a numpy array of float.")
+        raise ValueError("Cannot convert {} in a numpy array of float.".format(a))
 
     # check shape
     if np.all(np.array(shape) > 0):
         if a.shape != shape:
-            raise ValueError(f"The shape of coordinates is {a.shape}."
-                             f" The expected shape is {shape}.")
+            raise ValueError("The shape of coordinates is {}. The expected shape is {}.".format(a.shape, shape))
     else:
         for idim, (dim, dim_a) in enumerate(zip(shape, a.shape), 1):
             if dim < 0 and dim_a < -dim:
-                raise ValueError(f"The shape of coordinates is {a.shape}. "
-                                 f"The length in the dimension {idim} must "
-                                 f"be greater or equal to {-dim}.")
+                raise ValueError("The shape of coordinates is {}. The length in the dimension {} must be greater or equal to {}.".format(a.shape, idim, -dim))
             if 0 < dim != dim_a:
-                raise ValueError(f"The shape of coordinates is {a.shape}. "
-                                 f"The length in dimension {idim} must be "
-                                 f"equal to {dim}.")
+                raise ValueError("The shape of coordinates is {}. The length in dimension {} must be equal to {}.".format(a.shape, idim, dim))
 
     return a
 
@@ -397,8 +392,7 @@ def get_hybridization_coeff(pyrA=None, a=None, star_a=None, radians=False):
 
         # check domain definition of lambda_pi
         if np.tan(r_pyrA) > 1 / np.sqrt(2):
-            raise ValueError(f"pyrA = {np.degrees(r_pyrA)} degrees "
-                              "lambda_pi is not define.")
+            raise ValueError("pyrA = {} degrees lambda_pi is not define.".format(np.degrees(r_pyrA)))
 
         c_pi = np.sqrt(2) * np.tan(r_pyrA)
         lambda_pi = np.sqrt(1 - 2 * np.tan(r_pyrA) ** 2)
