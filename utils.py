@@ -234,7 +234,7 @@ def compute_data(species, coords, rcut=2.5, distances=None):
     natom = len(species)
     columns = ["atom index", "species", "x", "y", "z", "angular defect",
                "Pyr(A)", "improper", "spherical curvature", 
-               "c_pi^2", "lambda_pi^2", "m", "n",
+               "c_pi^2", "lambda_pi^2", "m", "n", "hybridization"
                "dist. from ave. plane", "n_neighbors", "ave. neighb. dist."]
     data = pd.DataFrame(columns=columns)
     # data = {
@@ -285,6 +285,7 @@ def compute_data(species, coords, rcut=2.5, distances=None):
             m, n = curvature.get_hybridization_numbers(pyrA)
             line["m"] = m
             line["n"] = n
+            line["hybridization"] = curvature.hybridization(pyrA)
 
         if n_neighbors >= 3:
             line["dist. from ave. plane"] = curvature.get_pyr_distance(atom_a, star_a)
