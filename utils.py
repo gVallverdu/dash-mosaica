@@ -234,7 +234,7 @@ def compute_data(species, coords, rcut=2.5, distances=None):
     natom = len(species)
     columns = ["atom index", "species", "x", "y", "z", "angular defect",
                "Pyr(A)", "improper", "spherical curvature", 
-               "c_pi^2", "lambda_pi^2", "m", "n", "hybridization"
+               "c_pi^2", "lambda_pi^2", "m", "n", "hybridization",
                "dist. from ave. plane", "n_neighbors", "ave. neighb. dist."]
     data = pd.DataFrame(columns=columns)
     # data = {
