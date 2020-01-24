@@ -216,6 +216,19 @@ body = html.Div(className="container", children=[
                               placeholder=0),
                 ]),
 
+                # --- nan color selector
+                html.Div(className="control-label",
+                         children="Color of NaN values"),
+                dcc.Input(
+                    className="control",
+                    id="nan-color-value",
+                    debounce=True,
+                    placeholder="#000000",
+                    value="#000000",
+                    type="text",
+                    pattern=u"^#([A-Fa-f0-9]{6}$"
+                ),
+
                 html.P("Click on atoms to highlight the corresponding lines"
                        " in the table on the right."),
             ]),
@@ -457,10 +470,11 @@ def select_rows_from_atoms(atom_ids):
      Input('dropdown-colormap', "value"),
      Input("data-storage", "modified_timestamp"),
      Input("cm-min-value", "value"),
-     Input("cm-max-value", "value")],
+     Input("cm-max-value", "value"),
+     Input("nan-color-value", "value")],
     [State("data-storage", "data")]
 )
-def map_data_on_atoms(selected_data, cm_name, ts, cm_min, cm_max, data):
+def map_data_on_atoms(selected_data, cm_name, ts, cm_min, cm_max, nan_color, data):
     """
     Map the selected data on the structure using a colormap.
     """
@@ -480,8 +494,18 @@ def map_data_on_atoms(selected_data, cm_name, ts, cm_min, cm_max, data):
         normalize = mpl.colors.Normalize(minval, maxval)
 
         cm = plt.cm.get_cmap(cm_name)
-        norm_cm = cm(X=normalize(values), alpha=1)
-        colors = [mpl.colors.rgb2hex(color) for color in norm_cm]
+ 
+        colors = list()
+        for value in values:
+            if np.isnan(value):
+                colors.append(nan_color)
+            else:
+                colors.append(mpl.colors.rgb2hex(cm(X=normalize(value), alpha=1)))
+
+#        nan_idx = np.nonzero(np.isnan(values))[0]
+#        norm_cm = cm(X=normalize(values), alpha=1)
+#        colors = [mpl.colors.rgb2hex(color) for color in norm_cm]
+ 
         styles_data = {
             str(iat): {
                 "color": colors[iat],
