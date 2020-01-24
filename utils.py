@@ -249,7 +249,8 @@ def compute_data(species, coords, rcut=2.5, distances=None):
     for iat in range(natom):
         # atom A
         atom_a = coords[iat, :]
-        line = {"atom index": iat + 1, "species": species[iat]}
+        line = {k: np.nan for k in columns}
+        line.update({"atom index": iat + 1, "species": species[iat]})
         line.update({x: coords[iat, i] for i, x in enumerate("xyz")})
 
         # look for atoms of *(A)
