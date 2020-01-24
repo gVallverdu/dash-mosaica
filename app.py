@@ -91,6 +91,7 @@ case, only the structure is read.
 import io
 import base64
 import urllib
+import re
 
 import dash
 import dash_table
@@ -112,6 +113,7 @@ __author__ = "Germain Salvato Vallverdu"
 __title__ = "Structural data viewer"
 __subtitle__ = "Part of the Mosaica project"
 
+HEX_COLOR_PATT = re.compile(r"^#[A-Fa-f0-9]{6}$")
 
 # ---- Set up App ----
 ext_css = ["https://use.fontawesome.com/releases/v5.8.1/css/all.css"]
@@ -224,9 +226,8 @@ body = html.Div(className="container", children=[
                     id="nan-color-value",
                     debounce=True,
                     placeholder="#000000",
-                    value="#000000",
                     type="text",
-                    pattern=u"^#([A-Fa-f0-9]{6}$"
+                    pattern=u"^#[A-Fa-f0-9]{6}$"
                 ),
 
                 html.P("Click on atoms to highlight the corresponding lines"
@@ -490,6 +491,10 @@ def map_data_on_atoms(selected_data, cm_name, ts, cm_min, cm_max, nan_color, dat
             minval = cm_min
         if cm_max:
             maxval = cm_max
+
+        # check nan_color value
+        if nan_color is None or not HEX_COLOR_PATT.match(nan_color):
+            nan_color = "#000000"
 
         normalize = mpl.colors.Normalize(minval, maxval)
 
