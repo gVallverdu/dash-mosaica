@@ -133,7 +133,7 @@ header = html.Div(className="head", children=[
     # html.H2(__subtitle__)
     html.A(
         id="github-link",
-        href="https://github.com/gVallverdu/dash-mosaica",
+        href="https://github.com/gVallverdu/pychemcurv",
         children=[
             "View on GitHub",
         ]
